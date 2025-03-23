@@ -1,5 +1,11 @@
 # MusCo Store
 
+1. `ssh-keygen -t rsa -b 4096 -C "mcoskuncelebi@gmail.com"`
+
+2. ssh root@46.202.155.206
+
+3.
+
 This project ...
 Structure:
 *FE - React and SCSS
