@@ -7,7 +7,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 8360;
 
 app.get("/", (req, res) => {
-  res.send("Backend sunucusu çalışıyor!");
+  res.send("Merhaba MusCo Backend sunucusu çalışıyor!");
 });
 
 app.listen(PORT, () => {
