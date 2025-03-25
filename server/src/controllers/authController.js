@@ -1,274 +1,321 @@
-// src/controllers/authController.js
-
+"use strict";
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const User = require("../models/User"); // Ensure correct case
-const dotenv = require("dotenv");
-const path = require("path");
+const argon2 = require("argon2");
+const User = require("../models/userModel");
+const sendResetEmail = require("../helpers/sendResetEmail"); // Ensure this helper is defined
 
-// Load environment variables
-dotenv.config({
-  path: path.join(__dirname, "../../.env"),
-});
+const JWT_SECRET = process.env.JWT_SECRET || "your_default_jwt_secret";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "your_default_refresh_secret";
 
-const JWT_SECRET = process.env.JWT_SECRET || "Mcc_JWT_SECRET";
-const REFRESH_SECRET = process.env.REFRESH_SECRET || "Mcc_REFRESH_SECRET";
-
-// Helper function to generate tokens
-const generateTokens = (user) => {
-  const accessToken = jwt.sign(
+// Helper function to generate JWT tokens
+const generateToken = (user, secret = JWT_SECRET, expiresIn = "1d") => {
+  return jwt.sign(
     {
       _id: user._id,
       username: user.username,
       role: user.role,
     },
-    JWT_SECRET,
-    { expiresIn: "7d" } // Access token expires in 7 days
+    secret,
+    { expiresIn }
   );
-
-  const refreshToken = jwt.sign(
-    {
-      _id: user._id,
-    },
-    REFRESH_SECRET,
-    { expiresIn: "15d" } // Refresh token expires in 15 days
-  );
-
-  return { accessToken, refreshToken };
 };
 
-// Refresh Token Controller
-const refreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 
-  if (!refreshToken) {
-    return res
-      .status(400)
-      .json({ error: true, message: "Refresh token is required." });
-  }
-
+const register = async (req, res) => {
+  const {
+    username,
+    password,
+    email,
+    firstName,
+    lastName,
+    role,
+    role2,
+    roleCode,
+    phone,
+    city,
+    country,
+    bio,
+  } = req.body;
   try {
-    // Verify refresh token
-    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
-
-    // Find user by ID and validate refresh token
-    const user = await User.findById(decoded._id);
-    if (!user || user.refreshToken !== refreshToken) {
-      return res
-        .status(401)
-        .json({ error: true, message: "Invalid refresh token." });
-    }
-
-    // Generate new tokens
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
-
-    // Update user's refresh token in the database
-    user.refreshToken = newRefreshToken;
-    await user.save();
-
-    // Respond with new tokens and user info
-    return res.status(200).json({
-      bearer: {
-        accessToken,
-        refreshToken: newRefreshToken,
-      },
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-      error: false,
-      message: "Token refreshed successfully.",
-    });
-  } catch (error) {
-    console.error("Refresh token error:", error);
-    return res
-      .status(401)
-      .json({ error: true, message: "Invalid or expired refresh token." });
-  }
-};
-
-// Login Controller
-const loginUser = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    // Validate input
-    if (!username || !password) {
-      return res.status(400).json({
-        error: true,
-        message: "Username and password are required.",
-      });
-    }
-
-    // Find user by username and include password
-    const user = await User.findOne({ username }).select("+password");
-    if (!user) {
-      return res.status(400).json({
-        error: true,
-        message: "Invalid credentials.",
-      });
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({
-        error: true,
-        message: "Invalid credentials.",
-      });
-    }
-
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user);
-
-    // Save refreshToken in user model
-    user.refreshToken = refreshToken;
-    await user.save();
-
-    // Return user data and tokens
-    return res.status(200).json({
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-      bearer: {
-        accessToken,
-        refreshToken,
-      },
-      error: false,
-      message: "Login successful.",
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({
-      error: true,
-      message: "Server error.",
-    });
-  }
-};
-
-// Register Controller
-const registerUser = async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    // Validate input
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        error: true,
-        message: "Username, email, and password are required.",
-      });
-    }
-
-    // Check for existing user
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({
         error: true,
-        message: "Username is already taken.",
+        message: "Username already exists.",
       });
     }
 
-    // Create new user
-    const user = await User.create({
-      username,
-      email,
-      password,
-    });
+    const allowedRoles = ["admin", "staff", "coordinator", "user"];
+    let assignedRole = null;
+    const roleLower = role ? role.toLowerCase() : "";
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user);
+    if (req.user && req.user.role === "admin") {
+      if (!allowedRoles.includes(roleLower)) {
+        return res.status(400).json({
+          error: true,
+          message: "Invalid role.",
+        });
+      }
+      assignedRole = roleLower;
+    } else {
+      assignedRole =
+        roleLower === "admin" && roleCode === process.env.ADMIN_CODE
+          ? "admin"
+          : roleLower === "staff" && roleCode === process.env.STAFF_CODE
+          ? "staff"
+          : roleLower === "coordinator" && roleCode === process.env.RC_CODE
+          ? "coordinator"
+          : roleLower === "user"
+          ? "user"
+          : null;
+    }
 
-    // Save refreshToken in user model
-    user.refreshToken = refreshToken;
-    await user.save();
-
-    // Return user data and tokens
-    return res.status(201).json({
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-      },
-      bearer: {
-        accessToken,
-        refreshToken,
-      },
-      error: false,
-      message: "User created.",
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-    return res.status(500).json({
-      error: true,
-      message: "Server error.",
-    });
-  }
-};
-
-// Logout Controller
-const logout = async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    // Validate input
-    if (!token) {
+    if (!assignedRole) {
       return res.status(400).json({
         error: true,
-        message: "Token is required.",
+        message: "Invalid role or role code.",
       });
     }
 
-    // Verify token
-    jwt.verify(token, REFRESH_SECRET, async (err, user) => {
+    let imageUrl = null;
+    console.log("Uploaded files:", req.files);
+    if (req.files && req.files.image && req.files.image.length > 0) {
+      const file = req.files.image[0];
+      if (file) {
+        imageUrl =
+          file.location ||
+          (file.key
+            ? `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.key}`
+            : null);
+      }
+    } else if (req.body.image) {
+      imageUrl = req.body.image.trim();
+    }
+
+    const newUser = new User({
+      username,
+      password,
+      email: email.trim().toLowerCase(),
+      firstName,
+      lastName,
+      role: assignedRole,
+      role2: role2 || null,
+      image: imageUrl,
+      phone: phone || null,
+      city: city || null,
+      country: country || null,
+      bio: bio || null,
+    });
+
+    // Tag regular users if applicable
+    if (req.user && req.user.role === "user") {
+      newUser.tester = true;
+      newUser.testerCreatedAt = new Date();
+    }
+
+    await newUser.save();
+    const accessToken = generateToken(newUser, JWT_SECRET, "1d");
+    const refreshToken = generateToken(newUser, JWT_REFRESH_SECRET, "30d");
+
+    return res.status(201).json({
+      error: false,
+      message: "User registered successfully.",
+      bearer: { accessToken, refreshToken },
+      user: {
+        id: newUser._id,
+        username,
+        email,
+        firstName,
+        lastName,
+        role: assignedRole,
+        role2: newUser.role2,
+        image: newUser.image,
+        phone: newUser.phone,
+        city: newUser.city,
+        country: newUser.country,
+        bio: newUser.bio,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return res.status(500).json({ error: true, message: "Server error." });
+  }
+};
+
+const login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json({ message: "Username and password are required." });
+    }
+
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username or password." });
+    }
+
+    const validPassword = await argon2.verify(user.password, password);
+    if (!validPassword) {
+      return res.status(401).json({ message: "Invalid username or password." });
+    }
+
+    const accessToken = generateToken(user, JWT_SECRET, "1d");
+    const refreshToken = generateToken(user, JWT_REFRESH_SECRET, "30d");
+
+    return res.json({
+      message: "Login successful.",
+      bearer: { accessToken, refreshToken },
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        image: user.image,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res
+      .status(500)
+      .json({ message: "Login failed", error: error.message });
+  }
+};
+
+const refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ message: "Refresh token is required." });
+    }
+
+    jwt.verify(refreshToken, JWT_REFRESH_SECRET, async (err, decoded) => {
       if (err) {
-        return res.status(403).json({
-          error: true,
-          message: "Invalid token.",
-        });
+        return res
+          .status(401)
+          .json({ message: "Invalid or expired refresh token." });
       }
 
-      // Find user by id
-      const existingUser = await User.findById(user._id);
-      if (!existingUser) {
-        return res.status(404).json({
-          error: true,
-          message: "User not found.",
-        });
+      const user = await User.findById(decoded._id);
+      if (!user) {
+        return res.status(403).json({ message: "User not found." });
       }
 
-      // Remove refreshToken from user model
-      existingUser.refreshToken = "";
-      await existingUser.save();
-
-      // Return success message
-      return res.status(200).json({
-        error: false,
-        message: "Logout successful.",
+      const newAccessToken = generateToken(user, JWT_SECRET, "1d");
+      return res.json({
+        message: "Token refreshed successfully.",
+        bearer: { accessToken: newAccessToken },
       });
     });
   } catch (error) {
-    console.error("Logout error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to refresh token", error: error.message });
+  }
+};
+
+const logout = (req, res) => {
+  return res.json({ message: "Logged out successfully." });
+};
+
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    // Normalize email and find user
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "No account found with this email address." });
+    }
+
+    // Create a JWT reset token valid for 1 hour
+    const resetToken = generateToken(user, JWT_SECRET, "1h");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Construct reset URL (adjust FRONTEND_BASE_URL as needed)
+    // const resetLink = `${
+    //   process.env.VITE_APP_API_URL || "http://127.0.0.1:3061"
+    // }/resetPassword?token=${resetToken}`;
+    const resetLink = `${"https://softrealizer.com"}/resetPassword?token=${resetToken}`;
+
+    // Send email with the reset link
+    await sendResetEmail(
+      user.email,
+      "Password Reset Request",
+      `Click here to reset your password: ${resetLink}`
+    );
+
+    return res.json({ message: "Password reset link sent to email." });
+  } catch (error) {
+    console.error("Error in requestPasswordReset:", error);
     return res.status(500).json({
-      error: true,
-      message: "Server error.",
+      message: "Failed to send password reset link",
+      error: error.message,
     });
   }
 };
 
-// Export the controllers
+const resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Reset token and new password are required." });
+    }
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          "Password must contain at least 8 characters, including an uppercase letter, a lowercase letter, a number, and a special character.",
+      });
+    }
+
+    // Verify and decode the reset token
+    const decoded = jwt.verify(resetToken, JWT_SECRET);
+    const user = await User.findById(decoded._id);
+    if (!user || user.resetPasswordToken !== resetToken) {
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired reset token." });
+    }
+
+    // Update password and clear reset token info
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    if (error.name === "TokenExpiredError") {
+      return res.status(400).json({ message: "Reset token expired." });
+    }
+    return res
+      .status(500)
+      .json({ message: "Failed to reset password", error: error.message });
+  }
+};
+
 module.exports = {
-  registerUser,
-  loginUser,
-  refreshToken,
+  register,
+  login,
+  refresh,
   logout,
+  requestPasswordReset,
+  resetPassword,
 };

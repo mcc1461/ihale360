@@ -1,152 +1,205 @@
-// Table.jsx
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { BsEye } from "react-icons/bs";
-import { HiOutlineRefresh } from "react-icons/hi";
-import { ImBin } from "react-icons/im";
-import { Link } from "react-router-dom";
-// Import apiClient instead of axios
-import apiClient from "../services/apiClient";
-import Search from "./search";
-import {
-  deleteProduct,
-  setProducts,
-} from "../features/api/products/productSlice";
+"use client";
 
-export default function Table() {
-  const [showModal, setShowModal] = useState(false);
-  const dispatch = useDispatch();
-  const products = useSelector((state) => state.product.products);
+import clsx from "clsx";
+import { createContext, useContext, useState } from "react";
 
-  const [search, setSearch] = useState("");
+// Create a context for table styling options.
+const TableContext = createContext({
+  bleed: false,
+  dense: false,
+  grid: false,
+  striped: false,
+});
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // Use apiClient without headers; token is handled by interceptor
-        const response = await apiClient.get("/products");
-        console.log("Products Response:", response.data);
+// The main Table component now accepts an optional "breakdown" prop.
+// If breakdown is provided, it should be an object with the following structure:
+// {
+//   title: string, // e.g., "Stock Breakdown by Category"
+//   columns: array of strings, e.g. ["Category", "Total Items", "Total Value", "Top 3 Items"],
+//   data: array of objects, each with keys matching the columns (for the last column, use an array for top items)
+// }
+export default function Table({
+  bleed = false,
+  dense = false,
+  grid = false,
+  striped = false,
+  breakdown, // optional breakdown information
+  className,
+  children,
+  ...props
+}) {
+  return (
+    <TableContext.Provider value={{ bleed, dense, grid, striped }}>
+      <div className="flow-root">
+        <div
+          {...props}
+          className={clsx(
+            className,
+            "-mx-[--gutter] overflow-x-auto whitespace-nowrap"
+          )}
+        >
+          <div
+            className={clsx(
+              "inline-block min-w-full align-middle",
+              !bleed && "sm:px-[--gutter]"
+            )}
+          >
+            {/* Breakdown Section (optional) */}
+            {breakdown && (
+              <div className="mb-4">
+                {breakdown.title && (
+                  <h2 className="mb-2 text-xl font-bold">{breakdown.title}</h2>
+                )}
+                <table className="min-w-full mb-4 text-left text-sm/6 text-zinc-950 dark:text-white">
+                  <thead>
+                    <tr>
+                      {breakdown.columns &&
+                        breakdown.columns.map((col, idx) => (
+                          <th
+                            key={idx}
+                            className={clsx(
+                              "border-b border-b-zinc-950/10 px-4 py-2 font-medium",
+                              grid &&
+                                "border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-white/5"
+                            )}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {breakdown.data &&
+                      breakdown.data.map((row, idx) => (
+                        <tr
+                          key={row.category || idx}
+                          className={clsx(
+                            striped &&
+                              idx % 2 === 1 &&
+                              "bg-zinc-950/[2.5%] dark:bg-white/[2.5%]"
+                          )}
+                        >
+                          <td className="px-4 py-2 border">{row.category}</td>
+                          <td className="px-4 py-2 text-right border">
+                            {row.total}
+                          </td>
+                          <td className="px-4 py-2 text-right border">
+                            ${Number(row.value).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 border">
+                            {Array.isArray(row.topItems) && (
+                              <ul className="ml-4 list-disc">
+                                {row.topItems.map((item, i) => (
+                                  <li key={i}>{item}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-        if (response.status === 200) {
-          dispatch(setProducts(response.data.products));
-          console.log("Products Response:", response.data.products);
-        }
-      } catch (error) {
-        console.error("Error Fetching Products", error);
+            {/* Main Table */}
+            <table className="min-w-full text-left text-sm/6 text-zinc-950 dark:text-white">
+              {children}
+            </table>
+          </div>
+        </div>
+      </div>
+    </TableContext.Provider>
+  );
+}
 
-        // Additional error details
-        if (error.response) {
-          console.error("Response Data:", error.response.data);
-          console.error("Response Status:", error.response.status);
-          console.error("Response Headers:", error.response.headers);
-        } else if (error.request) {
-          console.error("No Response Received:", error.request);
-        } else {
-          console.error("Error Message:", error.message);
-        }
-      }
-    };
-    fetchProducts();
-  }, [dispatch]);
+export function TableHead({ className, ...props }) {
+  return (
+    <thead
+      {...props}
+      className={clsx(className, "text-zinc-500 dark:text-zinc-400")}
+    />
+  );
+}
 
-  const handleDeleteProduct = (id) => {
-    dispatch(deleteProduct(id));
-    setShowModal(false);
-  };
+export function TableBody(props) {
+  return <tbody {...props} />;
+}
+
+const TableRowContext = createContext({
+  href: undefined,
+  target: undefined,
+  title: undefined,
+});
+
+export function TableRow({ href, target, title, className, ...props }) {
+  let { striped } = useContext(TableContext);
 
   return (
-    <div>
-      <div className="bg-white h-[15%] w-[98%] flex items-center justify-center">
-        <Search value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-      <div className="flex flex-col items-center justify-start h-[55vh] mt-3 w-[98%] ">
-        <table className="w-full text-center table-auto ">
-          <thead>
-            <tr className="border-t-2 border-b-2 border-black">
-              <th className="w-[5%]">S/N</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Value</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          {/*Table rows */}
-          <tbody className=" h-[300px] overflow-y-auto ">
-            {Array.isArray(products) && products.length > 0 ? (
-              products.map((product, index) => (
-                <tr
-                  key={product?._id}
-                  className="h-[40px] bg-gray-100 border-b-2 border-white"
-                >
-                  <td>{index + 1}</td>
-                  <td>{product?.name || "-"}</td>
-                  <td>{product?.category || "-"}</td>
-                  <td>#{product?.price || "-"}</td>
-                  <td>{product?.quantity || "-"}</td>
-                  <td>#{product?.value || "-"}</td>
-                  <td className="flex items-center justify-center gap-3 mt-3">
-                    <p>
-                      <Link to={`/dashboard/products/${product?._id}`}>
-                        <BsEye className="text-[#0F1377]" />
-                      </Link>
-                    </p>
-                    <p>
-                      <Link to={`/dashboard/editproduct/${product?._id}`}>
-                        <HiOutlineRefresh className="text-[#0A6502]" />
-                      </Link>
-                    </p>
-                    <p>
-                      <button onClick={() => setShowModal(true)}>
-                        <ImBin className="text-[#850707]" />
-                      </button>
-                    </p>
-                  </td>
+    <TableRowContext.Provider value={{ href, target, title }}>
+      <tr
+        {...props}
+        className={clsx(
+          className,
+          href &&
+            "has-[[data-row-link][data-focus]]:outline has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-white/[2.5%]",
+          striped && "even:bg-zinc-950/[2.5%] dark:even:bg-white/[2.5%]",
+          href && striped && "hover:bg-zinc-950/5 dark:hover:bg-white/5",
+          href &&
+            !striped &&
+            "hover:bg-zinc-950/[2.5%] dark:hover:bg-white/[2.5%]"
+        )}
+      />
+    </TableRowContext.Provider>
+  );
+}
 
-                  {showModal ? (
-                    <>
-                      {/*Delete Confirmation Modal*/}
-                      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none">
-                        <div className="relative w-auto max-w-3xl mx-auto my-6">
-                          <div className="border-0 rounded-lg shadow-lg relative flex flex-col items-center justify-center w-[40vw] h-[40vh] bg-white outline-none focus:outline-none">
-                            <p>Hey Joshua!</p>
-                            <p>Are you sure you want to delete this?</p>
-                            <div className="flex items-center justify-end p-6 border-t border-solid rounded-b border-blueGray-200">
-                              <button
-                                className="px-6 py-3 mb-1 mr-1 text-sm font-bold text-white uppercase bg-green-500 rounded outline-none background-transparent focus:outline-none hover:bg-green-300"
-                                type="button"
-                                onClick={() => handleDeleteProduct(product._id)}
-                              >
-                                Delete
-                              </button>
-                              <button
-                                className="px-6 py-3 mb-1 mr-1 text-sm font-bold text-white uppercase bg-red-500 rounded shadow outline-none hover:bg-red-300 hover:shadow-lg focus:outline-none"
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7">No products found</td>
-              </tr>
-            )}
-            <tr></tr>
-          </tbody>
-        </table>
-        <p className="w-full text-center text-slate-400">
-          by MusCo ©️ <span>{new Date().getFullYear()}</span>2024
-        </p>
-      </div>
-    </div>
+export function TableHeader({ className, ...props }) {
+  let { bleed, grid } = useContext(TableContext);
+  return (
+    <th
+      {...props}
+      className={clsx(
+        className,
+        "border-b border-b-zinc-950/10 px-4 py-2 font-medium first:pl-[var(--gutter,theme(spacing.2))] last:pr-[var(--gutter,theme(spacing.2))] dark:border-b-white/10",
+        grid &&
+          "border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-white/5",
+        !bleed && "sm:first:pl-1 sm:last:pr-1"
+      )}
+    />
+  );
+}
+
+export function TableCell({ className, children, ...props }) {
+  let { bleed, dense, grid, striped } = useContext(TableContext);
+  let { href, target, title } = useContext(TableRowContext);
+  let [cellRef, setCellRef] = useState(null);
+
+  return (
+    <td
+      ref={href ? setCellRef : undefined}
+      {...props}
+      className={clsx(
+        className,
+        "relative px-4 first:pl-[var(--gutter,theme(spacing.2))] last:pr-[var(--gutter,theme(spacing.2))]",
+        !striped && "border-b border-zinc-950/5 dark:border-white/5",
+        grid &&
+          "border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-white/5",
+        dense ? "py-2.5" : "py-4",
+        !bleed && "sm:first:pl-1 sm:last:pr-1"
+      )}
+    >
+      {href && (
+        <Link
+          data-row-link
+          href={href}
+          target={target}
+          aria-label={title}
+          tabIndex={cellRef?.previousElementSibling === null ? 0 : -1}
+          className="absolute inset-0 focus:outline-none"
+        />
+      )}
+      {children}
+    </td>
   );
 }

@@ -1,31 +1,48 @@
 "use strict";
-/* -------------------------------------------------------
-    NODEJS EXPRESS | MusCo Dev
-------------------------------------------------------- */
-const express = require("express");
-const router = express.Router();
-/* ------------------------------------------------------- */
-// routes/purchase:
-
-const authentication = require("../middlewares/authentication");
-const permissions = require("../middlewares/permissions");
-const purchaseController = require("../controllers/purchase");
+const router = require("express").Router();
+const {
+  authenticate,
+  authorizeRoles,
+} = require("../middlewares/authMiddleware");
+const purchaseController = require("../controllers/purchaseController");
 
 // URL: /purchases
 
-router.use(authentication); // Apply authentication middleware to all routes
-
 router
   .route("/")
-  .get(permissions.isStaffOrAdmin, purchaseController.list)
-  .post(permissions.isStaffOrAdmin, purchaseController.create);
+  .get(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.list
+  )
+  .post(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.create
+  );
+// "create" matches purchaseController.create
 
 router
   .route("/:id")
-  .get(permissions.isStaffOrAdmin, purchaseController.read)
-  .put(permissions.isStaffOrAdmin, purchaseController.update)
-  .patch(permissions.isStaffOrAdmin, purchaseController.update)
-  .delete(permissions.isStaffOrAdmin, purchaseController.delete);
+  .get(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.read
+  )
+  .put(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.update
+  )
+  .patch(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.update
+  )
+  .delete(
+    authenticate,
+    authorizeRoles("admin", "staff", "user"),
+    purchaseController.delete
+  );
 
-/* ------------------------------------------------------- */
 module.exports = router;

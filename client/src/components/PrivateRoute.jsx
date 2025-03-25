@@ -1,11 +1,16 @@
 // src/components/PrivateRoute.jsx
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
+// ADD THIS IMPORT
 import { useSelector } from "react-redux";
 
-const PrivateRoute = ({ children }) => {
-  const token = useSelector((state) => state.auth.token);
-  return token ? children : <Navigate to="/login" replace />;
-};
+export default function PrivateRoute() {
+  const { userInfo } = useSelector((state) => state.auth);
 
-export default PrivateRoute;
+  if (!userInfo) {
+    // Not logged in -> redirect
+    return <Navigate to="/login" replace />;
+  }
+  // Otherwise -> render the child route
+  return <Outlet />;
+}

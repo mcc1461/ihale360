@@ -1,77 +1,113 @@
 "use strict";
-/* -------------------------------------------------------
-    NODEJS EXPRESS | MusCo Dev
-------------------------------------------------------- */
-// app.use(findSearchSortPage):
 
-module.exports = (req, res, next) => {
-  // Searching & Sorting & Pagination:
+const jwt = require("jsonwebtoken");
 
-  // FILTERING: URL?filter[key1]=value1&filter[key2]=value2
-  let filter = req.query?.filter || {};
+module.exports = {
+  // Authentication middleware
+  authenticate: (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res
+        .status(401)
+        .json({ error: true, message: "Authentication required." });
+    }
 
-  // SEARCHING: URL?search[key1]=value1&search[key2]=value2
-  let search = req.query?.search || {};
-  // for (let key in search) search[key] = { $regex: search[key], $options: 'i' }
-  /* toString Searching: */
-  let where = [];
-  for (let key in search)
-    where.push(`this.${key}.toString().includes('${search[key]}')`);
-  search = where.length ? { $where: where.join(" && ") } : {};
-  /* toString Searching: */
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      next();
+    } catch (err) {
+      return res.status(401).json({ error: true, message: "Invalid token." });
+    }
+  },
 
-  // SORTING: URL?sort[key1]=asc&sort[key2]=desc (asc: A->Z - desc: Z->A)
-  let sort = req.query?.sort || {};
+  // Role-based authorization middleware
+  authorizeRoles:
+    (...roles) =>
+    (req, res, next) => {
+      if (!req.user) {
+        return res.status(403).json({ error: true, message: "No permission." });
+      }
 
-  // PAGINATION: URL?page=1&limit=10
-  // LIMIT:
-  let limit = Number(req.query?.limit);
-  limit = limit > 0 ? limit : Number(process.env?.PAGE_SIZE || 20);
-  // PAGE:
-  let page = Number(req.query?.page);
-  page = (page > 0 ? page : 1) - 1;
-  // SKIP:
-  let skip = Number(req.query?.skip);
-  skip = skip > 0 ? skip : page * limit;
+      // Allow 'self' access for specific routes
+      if (roles.includes("self") && req.user._id === req.params.id) {
+        return next();
+      }
 
-  // Run SearchingSortingPagination engine for Model:
-  res.getModelList = async function (
-    Model,
-    modelFilters = {},
-    populate = null
-  ) {
-    return await Model.find({ ...modelFilters, ...filter, ...search })
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .populate(populate);
-  };
+      // Check if the user role matches any allowed roles
+      if (!roles.some((role) => req.user.role === role)) {
+        return res.status(403).json({ error: true, message: "Access denied." });
+      }
 
-  // Details:
-  res.getModelListDetails = async function (Model, modelFilters = {}) {
-    const data = await Model.find({ ...modelFilters, ...filter, ...search });
-    const dataCount = data.length;
+      next();
+    },
 
-    let details = {
-      filter,
-      search,
-      sort,
-      skip,
-      limit,
-      page,
-      pages: {
-        previous: page > 0 ? page : false,
-        current: page + 1,
-        next: page + 2,
-        total: Math.ceil(dataCount / limit),
-      },
-      totalRecords: dataCount,
+  // Pagination, filtering, and sorting middleware
+  findSearchSortPage: (req, res, next) => {
+    const filter = req.query?.filter || {};
+    const search = req.query?.search || {};
+    const sort = req.query?.sort || {};
+    const limit = req.query?.limit
+      ? Number(req.query.limit)
+      : Number(process.env.PAGE_SIZE) || 20;
+    const page = req.query?.page ? Number(req.query.page) : 1;
+
+    const skip = limit ? (page - 1) * limit : 0;
+
+    // Convert search parameters to MongoDB regex for case-insensitive matching
+    for (let key in search) {
+      search[key] = { $regex: search[key], $options: "i" };
+    }
+
+    // Attach helper methods to the response object
+    res.getModelList = async function (
+      Model,
+      modelFilters = {},
+      populate = null
+    ) {
+      try {
+        const query = Model.find({ ...modelFilters, ...filter, ...search });
+        if (populate) query.populate(populate);
+
+        const result = await query.sort(sort).skip(skip).limit(limit);
+        return result;
+      } catch (err) {
+        console.error("Error fetching model list:", err.message);
+        throw err;
+      }
     };
-    details.pages.next =
-      details.pages.next > details.pages.total ? false : details.pages.next;
-    if (details.totalRecords <= limit) details.pages = false;
-    return details;
-  };
 
-  next();
+    res.getModelListDetails = async function (Model, modelFilters = {}) {
+      try {
+        const totalRecords = await Model.countDocuments({
+          ...modelFilters,
+          ...filter,
+          ...search,
+        });
+
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        return {
+          filter,
+          search,
+          sort,
+          limit,
+          skip,
+          page,
+          totalRecords,
+          pages: {
+            previous: page > 1 ? page - 1 : null,
+            current: page,
+            next: page < totalPages ? page + 1 : null,
+            total: totalPages,
+          },
+        };
+      } catch (err) {
+        console.error("Error fetching model list details:", err.message);
+        throw err;
+      }
+    };
+
+    next();
+  },
 };

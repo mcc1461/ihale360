@@ -1,27 +1,31 @@
 "use strict";
-
+/* -------------------------------------------------------
+    NODEJS EXPRESS | MusCo Dev
+------------------------------------------------------- */
 const router = require("express").Router();
-const brandController = require("../controllers/brand");
-const authenticate = require("../middlewares/authentication"); // Import authenticate middleware
+const {
+  authenticate,
+  authorizeRoles,
+} = require("../middlewares/authMiddleware");
+const brand = require("../controllers/brandController");
 
-// Apply authentication middleware to all routes in this router
-router.use(authenticate);
+// URL: /brands
 
-// Define Routes
+router
+  .route("/")
+  .get(brand.list)
+  .post(authenticate, authorizeRoles("admin", "staff", "user"), brand.create);
+// Admin and staff can create brands
 
-// GET /api/brands - List all brands
-router.get("/", brandController.list);
-
-// POST /api/brands - Create a new brand
-router.post("/", authenticate, brandController.create);
-
-// GET /api/brands/:id - Get a single brand by ID
-router.get("/:id", authenticate, brandController.read);
-
-// PUT /api/brands/:id - Update a brand by ID
-router.put("/:id", authenticate, brandController.update);
-
-// DELETE /api/brands/:id - Delete a brand by ID
-router.delete("/:id", authenticate, brandController.delete);
+router
+  .route("/:id")
+  .get(brand.read)
+  .put(authenticate, authorizeRoles("admin", "staff", "user"), brand.update)
+  // Only admin can update a brand?
+  // Actually, the comment says "Only admin can update," but your code says "admin, staff."
+  // Possibly a mismatch in the comment vs. the code.
+  .patch(authenticate, authorizeRoles("admin", "staff", "user"), brand.update)
+  .delete(authenticate, authorizeRoles("admin", "user"), brand.delete);
+// Only admin can delete a brand
 
 module.exports = router;

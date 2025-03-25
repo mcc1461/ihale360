@@ -2,35 +2,45 @@
 /* -------------------------------------------------------
     NODEJS EXPRESS | MusCo Dev
 ------------------------------------------------------- */
-const router = require("express").Router();
+const express = require("express");
+const path = require("path");
+const router = express.Router();
+
 /* ------------------------------------------------------- */
-// routes/document:
+// Import Dependencies
+const redoc = require("redoc-express");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("../configs/swagger.json");
 
-// URL: /documents
-
+/* ------------------------------------------------------- */
+// Base Route: /documents
 router.all("/", (req, res) => {
-  res.send({
+  res.json({
     swagger: "/documents/swagger",
     redoc: "/documents/redoc",
     json: "/documents/json",
   });
 });
 
-// JSON:
-router.use("/json", (req, res) => {
-  res.sendFile(`${__dirname}/../configs/swagger.json`, { root: "/" });
+// JSON Route: Serves the Swagger JSON
+router.get("/json", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../configs/swagger.json"));
 });
 
-// Redoc:
-const redoc = require("redoc-express");
-router.use("/redoc", redoc({ specUrl: "/documents/json", title: "API Docs" }));
+// Redoc Route: Serves API documentation via ReDoc
+router.get(
+  "/redoc",
+  redoc({
+    specUrl: "/documents/json",
+    title: "API Documentation - MusCo Dev",
+  })
+);
 
-// Swagger:
-const swaggerUi = require("swagger-ui-express");
+// Swagger UI Route: Serves API documentation via Swagger UI
 router.use(
   "/swagger",
   swaggerUi.serve,
-  swaggerUi.setup(require("../configs/swagger.json"), {
+  swaggerUi.setup(swaggerDocument, {
     swaggerOptions: { persistAuthorization: true },
   })
 );

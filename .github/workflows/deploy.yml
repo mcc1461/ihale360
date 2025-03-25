@@ -18,23 +18,26 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > my_ssh_key
           chmod 600 my_ssh_key
 
-      - name: Sync files to VPS using rsync (incremental sync)
+      - name: Sync files to VPS using rsync
         run: |
-          set -x
           rsync -avz --exclude=.git --exclude=node_modules --exclude=build -e 'ssh -i my_ssh_key -o StrictHostKeyChecking=no' ./ root@46.202.155.206:/var/www/ihale360
 
       - name: Install dependencies and build frontend
         run: |
           ssh -i my_ssh_key -o StrictHostKeyChecking=no root@46.202.155.206 << 'EOF'
             cd /var/www/ihale360/client
-            # Use npm ci for faster installation
             npm ci
             npm run build
           EOF
 
-      - name: Restart Nginx and PM2 with zero-downtime reload
+      - name: Restart Nginx and PM2
         run: |
           ssh -i my_ssh_key -o StrictHostKeyChecking=no root@46.202.155.206 << 'EOF'
             sudo systemctl restart nginx
             pm2 reload all --update-env
+            pm2 save
           EOF
+
+      - name: Remove SSH key file
+        if: always()
+        run: rm -f my_ssh_key

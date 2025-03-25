@@ -1,15 +1,30 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Vite configuration with proxy to the backend
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3360, // Frontend running on port 3360
+    port: 3360,
+    strictPort: true,
+    host: "0.0.0.0", // Ensure Vite listens on all interfaces
+    base: "/",
     proxy: {
       "/api": {
-        target: "http://localhost:8360", // Proxy API requests to backend
+        target: process.env.VITE_APP_API_URL || "http://localhost:8360",
         changeOrigin: true,
+      },
+    },
+    allowedHosts: ["softrealizer.com"],
+  },
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) return "vendor";
+          if (id.includes("components")) return "components";
+          if (id.includes("pages")) return "pages";
+        },
       },
     },
   },

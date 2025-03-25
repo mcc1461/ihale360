@@ -1,54 +1,58 @@
-// src/services/apiClient.jsx
+// src/services/apiClient.js
 
 import axios from "axios";
 
-// Create an Axios instance with the base URL from environment variables
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_URL, // Ensure this is correctly set in your environment variables
-});
-console.log("API Base URL:", apiClient.defaults.baseURL);
+// Pull your base URL from an environment variable (e.g. VITE_APP_API_URL)
+// Example: VITE_APP_API_URL="http://127.0.0.1:8061"
+const BASE_URL = import.meta.env.VITE_APP_API_URL;
 
-// Add a request interceptor to include the token in all requests except auth-related ones
+// Create an Axios instance, pointing to /api under your BASE_URL
+const apiClient = axios.create({
+  baseURL: `${BASE_URL}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// ----------------------------
+// Request Interceptor
+// ----------------------------
+// Automatically attach Authorization: Bearer <token> if token is in localStorage
 apiClient.interceptors.request.use(
   (config) => {
-    // Retrieve the 'token' and 'refreshToken' from localStorage
     const token = localStorage.getItem("token");
-    const refreshToken = localStorage.getItem("refreshToken");
-    const userStr = localStorage.getItem("user");
-
-    console.log("Token retrieved from localStorage:", token);
-    console.log("Refresh Token retrieved from localStorage:", refreshToken);
-
-    // If a token exists, set the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("Authorization header set:", config.headers.Authorization);
-    } else {
-      console.log("No token found; Authorization header not set.");
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle 401 Unauthorized errors globally
+// ----------------------------
+// Response Interceptor
+// ----------------------------
+// If we get 401 (Unauthorized), we remove tokens, then show a friendly message & link to login
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Client Error:", error);
-
-    if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized! Redirecting to login.");
-
-      // Clear user information from localStorage
+    if (error.response?.status === 401) {
+      // Remove any stored credentials
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
+      localStorage.removeItem("userInfo");
 
-      // Redirect to the login page
+      // Show a user-friendly alert. Alternatively, you could use a toast or modal.
+      alert(
+        "Login is required to continue.\n\nClick OK to go to the Login page."
+      );
+
+      // Optionally redirect the user to the login page
+      // If you're using React Router, you can do window.location = "/login"
       window.location.href = "/login";
     }
+
+    // For other errors, just reject as usual
     return Promise.reject(error);
   }
 );

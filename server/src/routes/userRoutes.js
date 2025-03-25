@@ -1,24 +1,88 @@
-// routes/user.js
-
 "use strict";
-
 const router = require("express").Router();
-const { isAdmin, isLogin } = require("../middlewares/permissions");
-const userController = require("../controllers/user");
+const multer = require("multer");
+const path = require("path");
+const { S3Client } = require("@aws-sdk/client-s3");
+const multerS3 = require("multer-s3-v3");
+const {
+  authenticate,
+  authorizeRoles,
+} = require("../middlewares/authMiddleware");
+const {
+  list,
+  create,
+  read,
+  update,
+  remove,
+} = require("../controllers/userController");
 
-// Registration Route (unprotected)
-router.post("/", userController.create);
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
-// Apply isLogin middleware to all routes below
-router.use(isLogin);
+if (!process.env.AWS_S3_BUCKET) {
+  console.error("Error: AWS_S3_BUCKET is not defined in your environment.");
+  process.exit(1);
+}
 
-router.get("/", userController.list);
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: process.env.AWS_S3_BUCKET,
+    key: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(
+        null,
+        `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`
+      );
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|svg|webp/;
+    const extname = fileTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = fileTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error("Only .jpeg, .jpg, .svg, .webp and .png files are allowed!"));
+  },
+});
 
+// Use upload.any() for routes that accept multipart/form-data.
+router.get(
+  "/",
+  authenticate,
+  authorizeRoles("admin", "staff", "coordinator", "user"),
+  list
+);
+router.post(
+  "/",
+  authenticate,
+  authorizeRoles("admin", "staff", "coordinator", "user"),
+  upload.any(),
+  create
+);
 router
   .route("/:id")
-  .get(userController.read)
-  .put(userController.update)
-  .patch(userController.update)
-  .delete(isAdmin, userController.remove); // Only admin can delete users
+  .get(authenticate, read)
+  .put(
+    authenticate,
+    authorizeRoles("admin", "staff", "coordinator", "user"),
+    upload.any(),
+    update
+  )
+  .patch(
+    authenticate,
+    authorizeRoles("admin", "staff", "coordinator", "user"),
+    upload.any(),
+    update
+  )
+  .delete(authenticate, authorizeRoles("admin", "user"), remove);
 
 module.exports = router;
