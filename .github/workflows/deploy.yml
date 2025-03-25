@@ -34,8 +34,8 @@ jobs:
         run: |
           ssh -i my_ssh_key -o StrictHostKeyChecking=no root@46.202.155.206 << 'EOF'
             sudo systemctl restart nginx
-            pm2 reload all --update-env
-            pm2 save
+            /root/.nvm/versions/node/v20.19.0/bin/pm2 reload all --update-env
+            /root/.nvm/versions/node/v20.19.0/bin/pm2 save
           EOF
 
       - name: Remove SSH key file
