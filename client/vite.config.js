@@ -6,6 +6,9 @@ const backendUrl = process.env.VITE_APP_API_URL || "http://localhost:8360";
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ["lucide-react"],
+  },
   server: {
     port: 3360, // Vite frontend portu
     host: "0.0.0.0", // Tüm arayüzlerden gelen istekleri kabul eder

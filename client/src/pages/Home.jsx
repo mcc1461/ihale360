@@ -1,80 +1,231 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import Logo from "../components/Logo";
-import store from "../assets/Musco_Store.jpg";
+import {
+  Building2,
+  GraduationCap,
+  Bell,
+  TrendingUp,
+  Search,
+  BookOpen,
+  CheckCircle,
+  ArrowRight,
+} from "lucide-react";
+import logo from "../assets/logo-i360.png";
 
 function Header() {
   return (
-    <div className="flex flex-col min-h-screen text-white bg-gradient-to-b from-violet-500 to-purple-700">
-      {/* Top navigation */}
-      <nav className="flex flex-col items-center justify-between px-4 py-4 sm:flex-row sm:px-8 sm:py-6 md:px-20 md:py-12">
-        {/* Logo and brand name */}
-        <div className="flex items-center space-x-2">
-          <Logo />
-          {/* Optionally add brand text here */}
-          {/* <span className="text-xl font-bold">MusCo-Store</span> */}
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <header className="text-white bg-primary">
+        <nav className="fixed top-0 left-0 right-0 z-10 flex items-center text-white shadow-md bg-cyan-500">
+          <div className="container flex items-center justify-between px-6 py-4 mx-auto">
+            <div className="flex items-center space-x-2">
+              <img
+                src={logo}
+                alt="İhale 360 logo"
+                className="w-[41px] h-[41px] rounded-full"
+              />
+              <span className="text-2xl font-bold text-primary">İhale 360</span>
+            </div>
+            <div className="hidden space-x-8 font-semibold md:flex">
+              <a
+                href="#features"
+                className="transition hover:text-primary-light"
+              >
+                Özellikler
+              </a>
+              <a
+                href="#services"
+                className="transition hover:text-primary-light"
+              >
+                Hizmetler
+              </a>
+              <a
+                href="#contact"
+                className="transition hover:text-primary-light"
+              >
+                İletişim
+              </a>
+            </div>
+            <button className="px-6 py-2 font-bold transition rounded-full bg-primary-light hover:bg-opacity-90">
+              <span className="px-3 py-1 bg-secondary text-primary rounded-xl">
+                Giriş Yap
+              </span>
+            </button>
+          </div>
+        </nav>
 
-        {/* Register/Login */}
-        <div className="flex flex-wrap items-center mt-4 space-x-3 sm:mt-0">
-          <Link
-            to="/register"
-            className="px-4 py-2 text-lg font-semibold transition-transform bg-blue-700 rounded-lg hover:-translate-y-1 hover:scale-105 hover:bg-blue-900"
-          >
-            Register
-          </Link>
-          <Link
-            to="/login"
-            className="px-4 py-2 text-lg font-semibold transition-transform bg-green-500 rounded-lg hover:-translate-y-1 hover:scale-105 hover:bg-green-700"
-          >
-            Login
-          </Link>
+        <div className="container px-6 py-24 mx-auto">
+          <div className="max-w-3xl">
+            <h1 className="mb-6 text-5xl font-bold">
+              Türkiye'nin En Kapsamlı İhale Platformu
+            </h1>
+            <p className="mb-8 text-xl opacity-90">
+              İhale süreçlerinizi profesyonelce yönetin, eğitimlerle gelişin ve
+              ekonomik fırsatları yakalayın.
+            </p>
+            <div className="flex space-x-4">
+              <button className="flex items-center px-8 py-3 font-semibold transition rounded-full bg-secondary hover:bg-opacity-90 text-primary">
+                Hemen Başla <ArrowRight className="ml-2" />
+              </button>
+              <button className="px-8 py-3 font-semibold transition border-2 border-white rounded-full hover:bg-white hover:text-primary">
+                Demo İste
+              </button>
+            </div>
+          </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Main Content */}
-      <main className="flex flex-col items-center flex-1 px-4 sm:px-8 md:px-20 lg:px-32">
-        {/* Hero Image */}
-        <div className="w-full max-w-4xl mt-8 mb-12">
-          <img
-            src={store}
-            alt="MusCo-Store"
-            className="w-full h-auto shadow-xl rounded-2xl"
+      {/* Features Section */}
+      <section className="container px-6 py-20 mx-auto" id="features">
+        <h2 className="mb-16 text-3xl font-bold text-center text-primary">
+          Neden İhale 360?
+        </h2>
+        <div className="grid gap-12 md:grid-cols-3">
+          <FeatureCard
+            icon={<Bell className="w-8 h-8 text-primary-light" />}
+            title="Anlık İhale Takibi"
+            description="Türkiye genelindeki tüm ihaleleri anlık olarak takip edin ve fırsatları kaçırmayın."
+          />
+          <FeatureCard
+            icon={<GraduationCap className="w-8 h-8 text-primary-light" />}
+            title="Uzman Eğitimleri"
+            description="Profesyonel eğitmenlerden ihale süreçleri hakkında detaylı eğitimler alın."
+          />
+          <FeatureCard
+            icon={<TrendingUp className="w-8 h-8 text-primary-light" />}
+            title="Ekonomik Analizler"
+            description="Piyasa analizleri ve ekonomik göstergelerle doğru kararlar alın."
           />
         </div>
+      </section>
 
-        {/* Headline & Key Points */}
-        <section className="w-full max-w-4xl space-y-8 text-center">
-          <h1 className="text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
-            Take Control of <br /> Your Sales Potential
-          </h1>
-          <p className="text-lg font-light sm:text-xl">
-            This powerful <strong>web app</strong> centralizes your entire store
-            management—giving you instant inventory insights, streamlined
-            customer engagement, and data-driven decision-making at your
-            fingertips.
+      {/* Services Section */}
+      <section className="py-20 bg-white" id="services">
+        <div className="container px-6 mx-auto">
+          <h2 className="mb-16 text-3xl font-bold text-center text-primary">
+            Hizmetlerimiz
+          </h2>
+          <div className="grid gap-12 md:grid-cols-2">
+            <ServiceCard
+              image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800"
+              title="İhale Eğitimleri"
+              features={[
+                "Temel ihale mevzuatı",
+                "İhale dosyası hazırlama",
+                "Fiyat analizi ve teklif stratejileri",
+                "Praktik uygulamalar",
+              ]}
+            />
+            <ServiceCard
+              image="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800"
+              title="İhale Takip Sistemi"
+              features={[
+                "Kişiselleştirilmiş ihale bildirimleri",
+                "Detaylı ihale analizi",
+                "Rakip analizi",
+                "Otomatik raporlama",
+              ]}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 text-white bg-primary">
+        <div className="container px-6 mx-auto text-center">
+          <h2 className="mb-8 text-3xl font-bold">
+            İhale süreçlerinizi profesyonelleştirin
+          </h2>
+          <p className="max-w-2xl mx-auto mb-8 text-xl opacity-90">
+            Hemen üye olun ve Türkiye'nin en kapsamlı ihale platformunun
+            avantajlarından yararlanmaya başlayın.
           </p>
-          {/* Benefits List */}
-          <ul className="pb-10 space-y-4 text-base leading-relaxed text-left sm:text-lg">
-            <li>
-              <strong>➤ Track &amp; Organize:</strong> Monitor stock levels and
-              avoid costly oversights.
+          <button className="px-8 py-3 font-semibold transition rounded-full bg-secondary hover:bg-opacity-90 text-primary">
+            Üye Ol
+          </button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 text-white bg-primary">
+        <div className="container px-6 mx-auto">
+          <div className="grid gap-8 md:grid-cols-4">
+            <div>
+              <div className="flex flex-col items-center mb-4 space-x-2">
+                <img
+                  src={logo}
+                  alt="İhale 360 logo"
+                  className="w-[41px] h-[41px] rounded-full"
+                />
+                <span className="text-2xl font-bold text-secondary">
+                  İhale 360
+                </span>
+                <p className="text-sm opacity-80">
+                  Türkiye'nin en kapsamlı ihale platformu
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-4 font-semibold text-secondary">Hizmetler</h3>
+              <ul className="space-y-2 text-sm opacity-80">
+                <li>İhale Takibi</li>
+                <li>Online Eğitimler</li>
+                <li>Danışmanlık</li>
+                <li>Raporlama</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-4 font-semibold text-secondary">Şirket</h3>
+              <ul className="space-y-2 text-sm opacity-80">
+                <li>Hakkımızda</li>
+                <li>İletişim</li>
+                <li>Blog</li>
+                <li>Kariyer</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-4 font-semibold text-secondary">İletişim</h3>
+              <ul className="space-y-2 text-sm opacity-80">
+                <li>info@ihale360.site</li>
+                <li>+90 (312) 555 00 00</li>
+                <li>Ankara, Türkiye</li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 mt-12 text-sm text-center border-t border-white border-opacity-10 opacity-80">
+            © 2024 İhale 360. Tüm hakları saklıdır.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, description }) {
+  return (
+    <div className="p-8 transition bg-white shadow-lg rounded-xl hover:shadow-xl">
+      <div className="mb-4">{icon}</div>
+      <h3 className="mb-4 text-xl font-semibold text-primary">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function ServiceCard({ image, title, features }) {
+  return (
+    <div className="overflow-hidden transition shadow-lg bg-background rounded-xl hover:shadow-xl">
+      <img src={image} alt={title} className="object-cover w-full h-48" />
+      <div className="p-8">
+        <h3 className="mb-4 text-xl font-semibold text-primary">{title}</h3>
+        <ul className="space-y-3">
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-center space-x-3">
+              <CheckCircle className="flex-shrink-0 w-5 h-5 text-primary-light" />
+              <span className="text-gray-600">{feature}</span>
             </li>
-            <li>
-              <strong>➤ Automate &amp; Save Time:</strong> Let MusCo-Store
-              handle routine tasks.
-            </li>
-            <li>
-              <strong>➤ Engage Customers:</strong> Build loyal relationships
-              with integrated sales tracking.
-            </li>
-            <li>
-              <strong>➤ Data-Driven Insights:</strong> Make confident decisions
-              with real-time dashboards.
-            </li>
-          </ul>
-        </section>
-      </main>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
