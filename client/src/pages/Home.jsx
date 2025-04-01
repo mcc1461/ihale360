@@ -1,13 +1,12 @@
 import React from "react";
+import { Link } from "react-router-dom"; // If using react-router
 import {
   Building2,
   GraduationCap,
   Bell,
   TrendingUp,
-  Search,
-  BookOpen,
-  CheckCircle,
   ArrowRight,
+  CheckCircle, // Added CheckCircle import
 } from "lucide-react";
 import logo from "../assets/logo-i360.png";
 
@@ -16,7 +15,7 @@ function Header() {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <header className="text-white bg-primary">
-        <nav className="fixed top-0 left-0 right-0 z-10 flex items-center text-white shadow-md bg-cyan-500">
+        <nav className="fixed top-0 left-0 right-0 z-10 shadow-md bg-cyan-500">
           <div className="container flex items-center justify-between px-6 py-4 mx-auto">
             <div className="flex items-center space-x-2">
               <img
@@ -39,8 +38,9 @@ function Header() {
               >
                 Hizmetler
               </a>
+              {/* If you are using React Router, you can replace the <a> tag with <Link to="/contact"> */}
               <a
-                href="#contact"
+                href="/contact"
                 className="transition hover:text-primary-light"
               >
                 İletişim
@@ -186,8 +186,8 @@ function Header() {
             <div>
               <h3 className="mb-4 font-semibold text-secondary">İletişim</h3>
               <ul className="space-y-2 text-sm opacity-80">
-                <li>info@ihale360.site</li>
-                <li>+90 (312) 555 00 00</li>
+                <li>mcoskuncelebi@gmail.com</li>
+                <li>+90 (532) 636 6199</li>
                 <li>Ankara, Türkiye</li>
               </ul>
             </div>

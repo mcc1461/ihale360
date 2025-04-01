@@ -29,6 +29,8 @@ import PurchasesList from "./utils/PurchasesList";
 import SellsList from "./utils/SellsList";
 import Team from "./pages/Team";
 
+import Contact from "./pages/Contact";
+
 import { hydrateFromStorage } from "./slices/authSlice"; // Redux action
 
 function App() {
@@ -58,6 +60,7 @@ function App() {
         <Route path="/board" element={<Board />} />
         <Route path="/overview" element={<Overview />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/contact" element={<Contact />} />
 
         {/* --------------------- Private (Auth) Routes --------------------- */}
         {/* Wrap them in <PrivateRoute> so user must be logged in */}

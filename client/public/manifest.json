@@ -1,0 +1,15 @@
+{
+  "name": "Your App Name",
+  "short_name": "App",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/musco-store.appspot.com/o/i360.png?alt=media&token=fa041ede-c9c5-4f84-9826-e5606a8de6f6",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
